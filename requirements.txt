@@ -1,6 +1,5 @@
 streamlit
 openai
-langchain
 pypdf
+langchain
 chromadb
-sqlite3
