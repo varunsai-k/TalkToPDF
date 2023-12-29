@@ -4,7 +4,7 @@ import os
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
@@ -50,7 +50,7 @@ if uploaded_file is not None:
             text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1500,chunk_overlap = 150)
             splits = text_splitter.split_documents(docs)
             embedding = OpenAIEmbeddings()
-            vectordb = Chroma.from_documents(documents=splits,embedding=embedding)
+            vectordb = FAISS.from_documents(documents=splits,embedding=embedding)
             retriever = vectordb.as_retriever(search_type="similarity",search_kwargs={"k": 4, "include_metadata": True})
             memory = ConversationBufferMemory(memory_key="chat_history",return_messages=True)
             qa = ConversationalRetrievalChain.from_llm(llm=ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0),chain_type='stuff',retriever=retriever,memory=memory)
