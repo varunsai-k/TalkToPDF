@@ -42,9 +42,9 @@ if uploaded_file is not None:
             if not openai_api_key:
                 st.info("Please add your 🔑 OpenAI API key to continue.")
                 st.stop()
-            with open("data/temp_pdf_file.pdf", "wb") as temp_file:
+            with open("temp_pdf_file.pdf", "wb") as temp_file:
                 temp_file.write(uploaded_file.read())
-            loader=PyPDFLoader(file_path="data/temp_pdf_file.pdf")
+            loader=PyPDFLoader(file_path="temp_pdf_file.pdf")
             docs=loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1500,chunk_overlap = 150)
             splits = text_splitter.split_documents(docs)
