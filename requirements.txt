@@ -2,4 +2,4 @@ streamlit
 openai
 langchain
 pypdf
-chromadb==0.3.26
+chromadb
