@@ -49,6 +49,7 @@ if uploaded_file is not None:
             docs=loader.load()
             text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1500,chunk_overlap = 150)
             splits = text_splitter.split_documents(docs)
+            st.write(splits[0].page_content[:500])
             embedding = OpenAIEmbeddings()
             vectordb = FAISS.from_documents(documents=splits,embedding=embedding)
             retriever = vectordb.as_retriever(search_type="similarity",search_kwargs={"k": 4, "include_metadata": True})
