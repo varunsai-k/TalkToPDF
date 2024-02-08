@@ -1,14 +1,18 @@
 import streamlit as st
-import openai
 import os
+import openai
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 from langchain.chat_models import ChatOpenAI
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationalRetrievalChain
-from langchain.prompts import SystemMessagePromptTemplate
+from langchain.llms import OpenAI
+from langchain.prompts import ChatPromptTemplate
+from langchain.schema.runnable import RunnableMap, RunnablePassthrough, RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
 
 st.set_page_config(page_title="TalkToPDF",page_icon="📄")
 with st.sidebar:
@@ -43,25 +47,24 @@ if uploaded_file is not None:
             if not openai_api_key:
                 st.info("Please add your 🔑 OpenAI API key to continue.")
                 st.stop()
-            with open("temp_pdf_file.pdf", "wb") as temp_file:
+            with open(r"temp_pdf_file.pdf", "wb") as temp_file:
                 temp_file.write(uploaded_file.read())
-            loader=PyPDFLoader(file_path="temp_pdf_file.pdf")
+            loader=PyPDFLoader(file_path=r"temp_pdf_file.pdf")
             docs=loader.load()
+            llm=OpenAI(temperature=0)
             text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1500,chunk_overlap = 150)
             splits = text_splitter.split_documents(docs)
             embedding = OpenAIEmbeddings()
             vectordb = FAISS.from_documents(documents=splits,embedding=embedding)
             retriever = vectordb.as_retriever(search_type="similarity",search_kwargs={"k": 4, "include_metadata": True})
-            memory = ConversationBufferMemory(memory_key="chat_history",return_messages=True)
-            qa = ConversationalRetrievalChain.from_llm(llm=ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0),chain_type='stuff',retriever=retriever,memory=memory)
-            sys_prompt = "Act as a friendly and helpful Question Answer System. Answer questions about Document they uploaded"
-            qa.combine_docs_chain.llm_chain.prompt.messages[0] = SystemMessagePromptTemplate.from_template(sys_prompt)
+            template="You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. Use three sentences maximum and keep the answer concise.\nQuestion: {question} \nContext: {context} \nAnswer:"
+            prompts = ChatPromptTemplate.from_template(template)
+            rag_chain = RunnableMap({"context": lambda x: retriever.get_relevant_documents(x["question"]),"question": lambda x: x["question"]}) | prompts | llm | StrOutputParser()
             st.session_state.messages.append({"role": "user", "content": prompt})
             st.chat_message("user").write(prompt)
-            response=qa({"question": prompt})
-            msg=response['answer']
-            st.session_state.messages.append({"role": "assistant", "content": msg})
-            st.chat_message("assistant").write(msg)
+            response=rag_chain.invoke({"question": prompt})
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.chat_message("assistant").write(response)
 else:
     
     if prompt := st.chat_input():
@@ -69,5 +72,5 @@ else:
                 st.info("Please add your 🔑 OpenAI API key to continue.")
                 st.stop()
             else:
-                st.info("Please Upload your document 📄 to continue.")
+                st.info("Please Upload your pdf 📄 to continue.")
                 st.stop()                
